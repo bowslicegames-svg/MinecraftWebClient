@@ -63,6 +63,11 @@
             background: #2f732f;
         }
 
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
         .output-box {
             background: #111;
             padding: 12px;
@@ -101,8 +106,8 @@
         <section>
             <h2>Overview & Instructions</h2>
             <p>
-                This interface allows you to test the authentication chain and verify backend functionality.
-                Microsoft, Xbox Live, and XSTS authentication are supported.
+                This interface allows you to test the full Microsoft → Xbox Live → XSTS authentication chain.
+                All authentication is handled securely through the Render backend.
             </p>
             <p>
                 Minecraft authentication requires Mojang API approval and is not yet available.
@@ -145,9 +150,7 @@
                 Integration will be enabled once API access is granted.
             </div>
 
-            <button disabled style="background:#555; cursor:not-allowed; margin-top:15px;">
-                Minecraft Authentication Unavailable
-            </button>
+            <button disabled>Minecraft Authentication Unavailable</button>
 
             <div id="mcOutput" class="output-box"></div>
         </section>
@@ -159,9 +162,9 @@
     </footer>
 
     <script>
-        // Redirect user to Microsoft login
+        // Redirect user to Microsoft login (Render backend)
         function redirectToMicrosoft() {
-            window.location.href = "/auth/login";
+            window.location.href = "https://minecraftwebclient-backend.onrender.com/auth/login";
         }
 
         // When user returns from Microsoft, extract ?code= and send to backend
@@ -171,23 +174,28 @@
 
             if (!code) return;
 
-            document.getElementById("loginOutput").textContent = "Exchanging Microsoft code...";
+            document.getElementById("loginOutput").textContent = "Exchanging Microsoft code with backend...";
 
-            const res = await fetch(`/auth/callback?code=${encodeURIComponent(code)}`);
+            const res = await fetch(
+                `https://minecraftwebclient-backend.onrender.com/auth/callback?code=${encodeURIComponent(code)}`
+            );
+
             const text = await res.text();
-
             document.getElementById("loginOutput").textContent = text;
+
+            // Clean URL (remove ?code= from GitHub Pages URL)
+            window.history.replaceState({}, document.title, "/MinecraftWebClient/");
         }
 
         // Xbox Live
         async function authXBL() {
-            const res = await fetch("/auth/xbl");
+            const res = await fetch("https://minecraftwebclient-backend.onrender.com/auth/xbl");
             document.getElementById("xblOutput").textContent = await res.text();
         }
 
         // XSTS
         async function authXSTS() {
-            const res = await fetch("/auth/xsts");
+            const res = await fetch("https://minecraftwebclient-backend.onrender.com/auth/xsts");
             document.getElementById("xstsOutput").textContent = await res.text();
         }
 
