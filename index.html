@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Minecraft Web Client – Xbox Live Auth</title>
+  <title>Minecraft Web Client – Auth Tester</title>
   <style>
     body {
       font-family: system-ui, sans-serif;
-      max-width: 700px;
+      max-width: 800px;
       margin: 40px auto;
       padding: 0 20px;
     }
@@ -38,49 +38,74 @@
 </head>
 <body>
 
-  <h1>Xbox Live Authentication</h1>
+  <h1>Minecraft Auth Tester</h1>
 
-  <p>
-    1. Go to <code>/auth/login</code> and sign in.<br>
-    2. Copy the <code>access_token</code> from the JSON.<br>
-    3. Paste it below and click the button.
-  </p>
+  <h2>Step 1 — Microsoft access_token</h2>
+  <p>Get this from <code>/auth/login</code> → <code>/auth/callback</code>.</p>
 
-  <label for="accessToken">Microsoft access_token</label>
-  <textarea id="accessToken" placeholder="Paste your access_token here"></textarea>
+  <label>access_token</label>
+  <textarea id="accessToken"></textarea>
+  <button id="sendXBL">Send to /auth/xbl</button>
 
-  <button id="sendBtn">Send to /auth/xbl</button>
+  <h2>Xbox Live Response</h2>
+  <pre id="xblOut">{}</pre>
 
-  <h2>Response</h2>
-  <pre id="output">{}</pre>
+  <h2>Step 2 — XSTS</h2>
+  <label>XBL Token</label>
+  <textarea id="xblToken"></textarea>
+
+  <label>UHS</label>
+  <textarea id="uhs"></textarea>
+
+  <button id="sendXSTS">Send to /auth/xsts</button>
+
+  <h2>XSTS Response</h2>
+  <pre id="xstsOut">{}</pre>
 
   <script>
     const BACKEND = "https://minecraftwebclient-backend.onrender.com"
 
-    const accessTokenInput = document.getElementById("accessToken")
-    const sendBtn = document.getElementById("sendBtn")
-    const output = document.getElementById("output")
+    const accessToken = document.getElementById("accessToken")
+    const sendXBL = document.getElementById("sendXBL")
+    const xblOut = document.getElementById("xblOut")
 
-    sendBtn.addEventListener("click", async () => {
-      const access_token = accessTokenInput.value.trim()
+    const xblToken = document.getElementById("xblToken")
+    const uhs = document.getElementById("uhs")
+    const sendXSTS = document.getElementById("sendXSTS")
+    const xstsOut = document.getElementById("xstsOut")
 
-      if (!access_token) {
-        output.textContent = "Error: access_token is empty."
-        return
-      }
+    sendXBL.addEventListener("click", async () => {
+      const token = accessToken.value.trim()
+      if (!token) return xblOut.textContent = "Missing access_token"
 
-      try {
-        const res = await fetch(`${BACKEND}/auth/xbl`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ access_token })
-        })
+      const res = await fetch(`${BACKEND}/auth/xbl`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: token })
+      })
 
-        const data = await res.json()
-        output.textContent = JSON.stringify(data, null, 2)
-      } catch (err) {
-        output.textContent = "Request failed: " + err.message
-      }
+      const data = await res.json()
+      xblOut.textContent = JSON.stringify(data, null, 2)
+
+      if (data.Token) xblToken.value = data.Token
+      if (data.DisplayClaims?.xui?.[0]?.uhs) uhs.value = data.DisplayClaims.xui[0].uhs
+    })
+
+    sendXSTS.addEventListener("click", async () => {
+      const token = xblToken.value.trim()
+      const userHash = uhs.value.trim()
+
+      if (!token || !userHash)
+        return xstsOut.textContent = "Missing xbl_token or uhs"
+
+      const res = await fetch(`${BACKEND}/auth/xsts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ xbl_token: token, uhs: userHash })
+      })
+
+      const data = await res.json()
+      xstsOut.textContent = JSON.stringify(data, null, 2)
     })
   </script>
 
