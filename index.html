@@ -1,150 +1,179 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Minecraft Web Client – Auth Tester</title>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 0 20px;
-    }
-    textarea {
-      width: 100%;
-      height: 120px;
-      font-family: monospace;
-      padding: 10px;
-      margin-top: 6px;
-    }
-    pre {
-      background: #111;
-      color: #0f0;
-      padding: 12px;
-      border-radius: 6px;
-      overflow-x: auto;
-      white-space: pre-wrap;
-    }
-    button {
-      padding: 10px 18px;
-      margin-top: 10px;
-      cursor: pointer;
-      font-size: 15px;
-    }
-    label {
-      font-weight: 600;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minecraft Web Client</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: #0e0e0e;
+            color: #e6e6e6;
+        }
+
+        header {
+            background: #1c1c1c;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #2e2e2e;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        main {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        section {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #2c2c2c;
+        }
+
+        section h2 {
+            margin-top: 0;
+            font-size: 22px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+
+        button {
+            background: #3a8b3a;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #2f732f;
+        }
+
+        .output-box {
+            background: #111;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: Consolas, monospace;
+            white-space: pre-wrap;
+            border: 1px solid #333;
+        }
+
+        .notice {
+            background: #2a2a2a;
+            padding: 15px;
+            border-left: 4px solid #d4a72c;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+            font-size: 14px;
+        }
+    </style>
 </head>
+
 <body>
+    <header>
+        <h1>Minecraft Web Client</h1>
+    </header>
 
-  <h1>Minecraft Auth Tester</h1>
+    <main>
 
-  <h2>Step 1 — Microsoft access_token</h2>
-  <p>Get this from /auth/login → /auth/callback.</p>
+        <!-- Instructions -->
+        <section>
+            <h2>Overview & Instructions</h2>
+            <p>
+                Welcome to the Minecraft Web Client project. This interface allows you to test UI components,
+                interact with the backend, and verify that all systems are functioning correctly.
+            </p>
+            <p>
+                Authentication with Microsoft, Xbox Live, and XSTS is fully implemented on the backend.
+                However, Minecraft-specific authentication requires Mojang API approval.
+            </p>
+        </section>
 
-  <label>access_token</label>
-  <textarea id="accessToken"></textarea>
-  <button id="sendXBL">Send to /auth/xbl</button>
+        <!-- Microsoft Login -->
+        <section>
+            <h2>Microsoft Authentication</h2>
+            <p>Begin the authentication chain by signing in with your Microsoft account.</p>
+            <button onclick="startLogin()">Start Microsoft Login</button>
+            <div id="loginOutput" class="output-box"></div>
+        </section>
 
-  <h2>Xbox Live Response</h2>
-  <pre id="xblOut">{}</pre>
+        <!-- Xbox Live -->
+        <section>
+            <h2>Xbox Live Authentication</h2>
+            <p>Exchange your Microsoft token for an Xbox Live token.</p>
+            <button onclick="authXBL()">Authenticate with Xbox Live</button>
+            <div id="xblOutput" class="output-box"></div>
+        </section>
 
-  <h2>Step 2 — XSTS</h2>
-  <label>XBL Token</label>
-  <textarea id="xblToken"></textarea>
+        <!-- XSTS -->
+        <section>
+            <h2>XSTS Authorization</h2>
+            <p>Authorize your Xbox Live identity with XSTS.</p>
+            <button onclick="authXSTS()">Request XSTS Token</button>
+            <div id="xstsOutput" class="output-box"></div>
+        </section>
 
-  <label>UHS</label>
-  <textarea id="uhs"></textarea>
+        <!-- Minecraft Auth -->
+        <section>
+            <h2>Minecraft Authentication</h2>
+            <p>This step normally exchanges your XSTS token for a Minecraft access token.</p>
 
-  <button id="sendXSTS">Send to /auth/xsts</button>
+            <div class="notice">
+                <strong>Notice:</strong><br>
+                Minecraft authentication is not yet available.  
+                Mojang requires manual approval for third‑party applications accessing Java Edition game services.  
+                Integration will be enabled once API access is granted.
+            </div>
 
-  <h2>XSTS Response</h2>
-  <pre id="xstsOut">{}</pre>
+            <button disabled style="background:#555; cursor:not-allowed; margin-top:15px;">
+                Minecraft Authentication Unavailable
+            </button>
 
-  <h2>Step 3 — Minecraft Services</h2>
-  <label>XSTS Token</label>
-  <textarea id="xstsToken"></textarea>
+            <div id="mcOutput" class="output-box"></div>
+        </section>
 
-  <label>UHS</label>
-  <textarea id="uhs2"></textarea>
+    </main>
 
-  <button id="sendMC">Send to /auth/mc</button>
+    <footer>
+        Minecraft Web Client — Frontend Interface • Professional Build
+    </footer>
 
-  <h2>Minecraft Response</h2>
-  <pre id="mcOut">{}</pre>
+    <script>
+        async function startLogin() {
+            const res = await fetch("/auth/login");
+            document.getElementById("loginOutput").textContent = await res.text();
+        }
 
-  <script>
-    const BACKEND = "https://minecraftwebclient-backend.onrender.com"
+        async function authXBL() {
+            const res = await fetch("/auth/xbl");
+            document.getElementById("xblOutput").textContent = await res.text();
+        }
 
-    const accessToken = document.getElementById("accessToken")
-    const sendXBL = document.getElementById("sendXBL")
-    const xblOut = document.getElementById("xblOut")
-
-    const xblToken = document.getElementById("xblToken")
-    const uhs = document.getElementById("uhs")
-    const sendXSTS = document.getElementById("sendXSTS")
-    const xstsOut = document.getElementById("xstsOut")
-
-    const xstsToken = document.getElementById("xstsToken")
-    const uhs2 = document.getElementById("uhs2")
-    const sendMC = document.getElementById("sendMC")
-    const mcOut = document.getElementById("mcOut")
-
-    sendXBL.addEventListener("click", async () => {
-      const token = accessToken.value.trim()
-      if (!token) return xblOut.textContent = "Missing access_token"
-
-      const res = await fetch(`${BACKEND}/auth/xbl`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ access_token: token })
-      })
-
-      const data = await res.json()
-      xblOut.textContent = JSON.stringify(data, null, 2)
-
-      if (data.Token) xblToken.value = data.Token
-      if (data.DisplayClaims?.xui?.[0]?.uhs) uhs.value = data.DisplayClaims.xui[0].uhs
-    })
-
-    sendXSTS.addEventListener("click", async () => {
-      const token = xblToken.value.trim()
-      const userHash = uhs.value.trim()
-
-      if (!token || !userHash)
-        return xstsOut.textContent = "Missing xbl_token or uhs"
-
-      const res = await fetch(`${BACKEND}/auth/xsts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ xbl_token: token, uhs: userHash })
-      })
-
-      const data = await res.json()
-      xstsOut.textContent = JSON.stringify(data, null, 2)
-
-      if (data.Token) xstsToken.value = data.Token
-      if (data.DisplayClaims?.xui?.[0]?.uhs) uhs2.value = data.DisplayClaims.xui[0].uhs
-    })
-
-    sendMC.addEventListener("click", async () => {
-      const token = xstsToken.value.trim()
-      const userHash = uhs2.value.trim()
-
-      if (!token || !userHash)
-        return mcOut.textContent = "Missing xsts_token or uhs"
-
-      const res = await fetch(`${BACKEND}/auth/mc`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ xsts_token: token, uhs: userHash })
-      })
-
-      const data = await res.json()
-      mcOut.textContent = JSON.stringify(data, null, 2)
-    })
-  </script>
-
+        async function authXSTS() {
+            const res = await fetch("/auth/xsts");
+            document.getElementById("xstsOutput").textContent = await res.text();
+        }
+    </script>
 </body>
 </html>
