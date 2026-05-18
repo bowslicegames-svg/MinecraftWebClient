@@ -101,20 +101,19 @@
         <section>
             <h2>Overview & Instructions</h2>
             <p>
-                Welcome to the Minecraft Web Client project. This interface allows you to test UI components,
-                interact with the backend, and verify that all systems are functioning correctly.
+                This interface allows you to test the authentication chain and verify backend functionality.
+                Microsoft, Xbox Live, and XSTS authentication are supported.
             </p>
             <p>
-                Authentication with Microsoft, Xbox Live, and XSTS is fully implemented on the backend.
-                However, Minecraft-specific authentication requires Mojang API approval.
+                Minecraft authentication requires Mojang API approval and is not yet available.
             </p>
         </section>
 
         <!-- Microsoft Login -->
         <section>
             <h2>Microsoft Authentication</h2>
-            <p>Begin the authentication chain by signing in with your Microsoft account.</p>
-            <button onclick="startLogin()">Start Microsoft Login</button>
+            <p>Click below to begin Microsoft login. You will be redirected to Microsoft and then returned here.</p>
+            <button onclick="redirectToMicrosoft()">Start Microsoft Authentication</button>
             <div id="loginOutput" class="output-box"></div>
         </section>
 
@@ -160,20 +159,40 @@
     </footer>
 
     <script>
-        async function startLogin() {
-            const res = await fetch("/auth/login");
-            document.getElementById("loginOutput").textContent = await res.text();
+        // Redirect user to Microsoft login
+        function redirectToMicrosoft() {
+            window.location.href = "/auth/login";
         }
 
+        // When user returns from Microsoft, extract ?code= and send to backend
+        async function checkForAuthCode() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get("code");
+
+            if (!code) return;
+
+            document.getElementById("loginOutput").textContent = "Exchanging Microsoft code...";
+
+            const res = await fetch(`/auth/callback?code=${encodeURIComponent(code)}`);
+            const text = await res.text();
+
+            document.getElementById("loginOutput").textContent = text;
+        }
+
+        // Xbox Live
         async function authXBL() {
             const res = await fetch("/auth/xbl");
             document.getElementById("xblOutput").textContent = await res.text();
         }
 
+        // XSTS
         async function authXSTS() {
             const res = await fetch("/auth/xsts");
             document.getElementById("xstsOutput").textContent = await res.text();
         }
+
+        // Run on page load
+        checkForAuthCode();
     </script>
 </body>
 </html>
