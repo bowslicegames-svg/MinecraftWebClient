@@ -167,40 +167,76 @@
             window.location.href = "https://minecraftwebclient-backend.onrender.com/auth/login";
         }
 
-        // When user returns from Microsoft, extract ?code= and send to backend
-        async function checkForAuthCode() {
+        // When user returns from Microsoft, extract ?ms_token= and parse it
+        async function checkForMsToken() {
             const params = new URLSearchParams(window.location.search);
-            const code = params.get("code");
+            const rawToken = params.get("ms_token");
 
-            if (!code) return;
+            if (!rawToken) return;
 
-            document.getElementById("loginOutput").textContent = "Exchanging Microsoft code with backend...";
+            document.getElementById("loginOutput").textContent =
+                "Microsoft login successful. Parsing token...";
 
-            const res = await fetch(
-                `https://minecraftwebclient-backend.onrender.com/auth/callback?code=${encodeURIComponent(code)}`
-            );
+            try {
+                const tokenJson = JSON.parse(decodeURIComponent(rawToken));
 
-            const text = await res.text();
-            document.getElementById("loginOutput").textContent = text;
+                document.getElementById("loginOutput").textContent =
+                    JSON.stringify(tokenJson, null, 2);
 
-            // Clean URL (remove ?code= from GitHub Pages URL)
+            } catch (err) {
+                document.getElementById("loginOutput").textContent =
+                    "Failed to parse ms_token.";
+            }
+
+            // Clean URL (remove ?ms_token= from GitHub Pages URL)
             window.history.replaceState({}, document.title, "/MinecraftWebClient/");
         }
 
         // Xbox Live
         async function authXBL() {
-            const res = await fetch("https://minecraftwebclient-backend.onrender.com/auth/xbl");
+            const msOutput = document.getElementById("loginOutput").textContent;
+            let msToken;
+
+            try {
+                msToken = JSON.parse(msOutput).access_token;
+            } catch {
+                return alert("You must log in with Microsoft first.");
+            }
+
+            const res = await fetch("https://minecraftwebclient-backend.onrender.com/auth/xbl", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ access_token: msToken })
+            });
+
             document.getElementById("xblOutput").textContent = await res.text();
         }
 
         // XSTS
         async function authXSTS() {
-            const res = await fetch("https://minecraftwebclient-backend.onrender.com/auth/xsts");
+            const xblOutput = document.getElementById("xblOutput").textContent;
+            let xblJson;
+
+            try {
+                xblJson = JSON.parse(xblOutput);
+            } catch {
+                return alert("You must complete Xbox Live authentication first.");
+            }
+
+            const res = await fetch("https://minecraftwebclient-backend.onrender.com/auth/xsts", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    xbl_token: xblJson.Token,
+                    uhs: xblJson.DisplayClaims.xui[0].uhs
+                })
+            });
+
             document.getElementById("xstsOutput").textContent = await res.text();
         }
 
         // Run on page load
-        checkForAuthCode();
+        checkForMsToken();
     </script>
 </body>
 </html>
