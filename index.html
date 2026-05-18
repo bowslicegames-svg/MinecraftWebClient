@@ -41,7 +41,7 @@
   <h1>Minecraft Auth Tester</h1>
 
   <h2>Step 1 — Microsoft access_token</h2>
-  <p>Get this from <code>/auth/login</code> → <code>/auth/callback</code>.</p>
+  <p>Get this from /auth/login → /auth/callback.</p>
 
   <label>access_token</label>
   <textarea id="accessToken"></textarea>
@@ -62,6 +62,18 @@
   <h2>XSTS Response</h2>
   <pre id="xstsOut">{}</pre>
 
+  <h2>Step 3 — Minecraft Services</h2>
+  <label>XSTS Token</label>
+  <textarea id="xstsToken"></textarea>
+
+  <label>UHS</label>
+  <textarea id="uhs2"></textarea>
+
+  <button id="sendMC">Send to /auth/mc</button>
+
+  <h2>Minecraft Response</h2>
+  <pre id="mcOut">{}</pre>
+
   <script>
     const BACKEND = "https://minecraftwebclient-backend.onrender.com"
 
@@ -73,6 +85,11 @@
     const uhs = document.getElementById("uhs")
     const sendXSTS = document.getElementById("sendXSTS")
     const xstsOut = document.getElementById("xstsOut")
+
+    const xstsToken = document.getElementById("xstsToken")
+    const uhs2 = document.getElementById("uhs2")
+    const sendMC = document.getElementById("sendMC")
+    const mcOut = document.getElementById("mcOut")
 
     sendXBL.addEventListener("click", async () => {
       const token = accessToken.value.trim()
@@ -106,6 +123,26 @@
 
       const data = await res.json()
       xstsOut.textContent = JSON.stringify(data, null, 2)
+
+      if (data.Token) xstsToken.value = data.Token
+      if (data.DisplayClaims?.xui?.[0]?.uhs) uhs2.value = data.DisplayClaims.xui[0].uhs
+    })
+
+    sendMC.addEventListener("click", async () => {
+      const token = xstsToken.value.trim()
+      const userHash = uhs2.value.trim()
+
+      if (!token || !userHash)
+        return mcOut.textContent = "Missing xsts_token or uhs"
+
+      const res = await fetch(`${BACKEND}/auth/mc`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ xsts_token: token, uhs: userHash })
+      })
+
+      const data = await res.json()
+      mcOut.textContent = JSON.stringify(data, null, 2)
     })
   </script>
 
