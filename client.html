@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minecraft Web Client – Client</title>
+</head>
+
+<body>
+    <h1>Minecraft Web Client – Client</h1>
+
+    <div id="warning" style="
+        background:#ffcc00;
+        padding:15px;
+        border:2px solid #aa8800;
+        margin-bottom:20px;
+        font-weight:bold;
+    ">
+        ⚠️ Authentication Required  
+        <br><br>
+        Normally, this page would only be accessible after full Mojang‑approved authentication.  
+        Since Mojang has not yet granted API access, this page is temporarily unlocked for development and UI testing only.
+    </div>
+
+    <p>This is where the renderer, world view, and gameplay UI will go.</p>
+
+<script>
+// Once Mojang approves, replace this with a redirect:
+if (!window.isAuthenticated) {
+    // For now, we only show a warning.
+    // After Mojang approval, replace with:
+    // window.location.href = "index.html";
+}
+</script>
+
+</body>
+</html>
