@@ -61,41 +61,23 @@
     </main>
 
 <script>
-/*
-    REDIRECT SYSTEM (Mojang‑compliant)
-
-    This prevents users from manually typing client.html into the URL bar.
-
-    It only allows access if:
-    - The user came from index.html (via the Continue button)
-    - OR Mojang has not yet approved API access (development mode)
-
-    Once Mojang approves, replace:
-        if (!cameFromIndex) { show warning }
-    with:
-        if (!cameFromIndex) window.location.href = "index.html";
-*/
-
+// SECURE ENTRY CHECK
 (function() {
-    // Detect if user came from index.html
-    const ref = document.referrer;
+    const params = new URLSearchParams(window.location.search);
+    const entry = params.get("entry");
+    const stored = sessionStorage.getItem("entryToken");
 
-    const cameFromIndex =
-        ref.includes("index.html") ||
-        ref.endsWith("/") || 
-        ref.includes("MinecraftWebClient"); // GitHub Pages root
-
-    if (!cameFromIndex) {
-        // DEVELOPMENT MODE (Mojang not approved yet)
-        // Show warning but allow access
-        document.getElementById("warning").style.display = "block";
-
-        // Once Mojang approves, replace this with:
-        // window.location.href = "index.html";
-    } else {
-        // Hide warning if user came from index.html
-        document.getElementById("warning").style.display = "none";
+    // If no token or mismatch → redirect
+    if (!entry || entry !== stored) {
+        window.location.href = "index.html";
+        return;
     }
+
+    // Valid entry → remove token so it can't be reused
+    sessionStorage.removeItem("entryToken");
+
+    // Hide warning (development mode only)
+    document.getElementById("warning").style.display = "none";
 })();
 </script>
 
