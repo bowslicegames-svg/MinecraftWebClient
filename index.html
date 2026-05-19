@@ -239,15 +239,18 @@
             const xstsText = await res.text();
             document.getElementById("xstsOutput").textContent = xstsText;
 
-            // Mark session as authenticated (temporary, in-memory only)
+            // Mark session as authenticated (temporary)
             window.isAuthenticated = true;
 
             // Show continue button
             document.getElementById("continueBtn").style.display = "block";
         }
 
+        // SECURE one‑time entry token system
         function goToClient() {
-            window.location.href = "client.html";
+            const entryToken = Math.random().toString(36).substring(2);
+            sessionStorage.setItem("entryToken", entryToken);
+            window.location.href = "client.html?entry=" + entryToken;
         }
 
         // Run on page load
