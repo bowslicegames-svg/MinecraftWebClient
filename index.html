@@ -78,14 +78,6 @@
             border: 1px solid #333;
         }
 
-        .notice {
-            background: #2a2a2a;
-            padding: 15px;
-            border-left: 4px solid #d4a72c;
-            border-radius: 6px;
-            margin-top: 10px;
-        }
-
         footer {
             text-align: center;
             padding: 20px;
@@ -106,18 +98,18 @@
         <section>
             <h2>Overview & Instructions</h2>
             <p>
-                This interface allows you to test the full Microsoft → Xbox Live → XSTS authentication chain.
+                This interface performs the full Microsoft → Xbox Live → XSTS → Minecraft authentication chain.
                 All authentication is handled securely through the Render backend.
             </p>
             <p>
-                Minecraft authentication requires Mojang API approval and is not yet available.
+                Your AppID is approved by Mojang. Minecraft authentication is now LIVE.
             </p>
         </section>
 
         <!-- Microsoft Login -->
         <section>
             <h2>Microsoft Authentication</h2>
-            <p>Click below to begin Microsoft login. You will be redirected to Microsoft and then returned here.</p>
+            <p>Click below to begin Microsoft login.</p>
             <button onclick="redirectToMicrosoft()">Start Microsoft Authentication</button>
             <div id="loginOutput" class="output-box"></div>
         </section>
@@ -141,16 +133,9 @@
         <!-- Minecraft Auth -->
         <section>
             <h2>Minecraft Authentication</h2>
-            <p>This step normally exchanges your XSTS token for a Minecraft access token.</p>
+            <p>This step exchanges your XSTS token for a Minecraft access token and checks your entitlements.</p>
 
-            <div class="notice">
-                <strong>Notice:</strong><br>
-                Minecraft authentication is not yet available.  
-                Mojang requires manual approval for third‑party applications accessing Java Edition game services.  
-                Integration will be enabled once API access is granted.
-            </div>
-
-            <button disabled>Minecraft Authentication Unavailable</button>
+            <button onclick="authMinecraft()">Authenticate with Minecraft</button>
 
             <div id="mcOutput" class="output-box"></div>
         </section>
@@ -158,14 +143,14 @@
         <!-- Continue to Client -->
         <section>
             <h2>Continue</h2>
-            <p>Once authenticated, continue to the client.</p>
+            <p>Once fully authenticated, continue to the client.</p>
             <button id="continueBtn" style="display:none;" onclick="goToClient()">Go to Client</button>
         </section>
 
     </main>
 
     <footer>
-        Minecraft Web Client — Frontend Interface • Professional Build
+        Minecraft Web Client — Full Authentication Enabled
     </footer>
 
     <script>
@@ -191,22 +176,17 @@
                 return;
             }
 
-            // Display full token JSON for debugging
             document.getElementById("loginOutput").textContent =
                 JSON.stringify(msToken, null, 2);
 
-            // Store ONLY the access token for later steps
             window.msAccessToken = msToken.access_token;
 
-            // Clean URL
             window.history.replaceState({}, document.title, "/MinecraftWebClient/");
         }
 
         // Xbox Live Authentication
         async function authXBL() {
-            if (!window.msAccessToken) {
-                return alert("You must log in with Microsoft first.");
-            }
+            if (!window.msAccessToken) return alert("Login with Microsoft first.");
 
             const res = await fetch("https://minecraftwebclient-backend.onrender.com/auth/xbl", {
                 method: "POST",
@@ -214,7 +194,8 @@
                 body: JSON.stringify({ access_token: window.msAccessToken })
             });
 
-            document.getElementById("xblOutput").textContent = await res.text();
+            const text = await res.text();
+            document.getElementById("xblOutput").textContent = text;
         }
 
         // XSTS Authentication
@@ -236,14 +217,39 @@
                 })
             });
 
-            const xstsText = await res.text();
-            document.getElementById("xstsOutput").textContent = xstsText;
+            const text = await res.text();
+            document.getElementById("xstsOutput").textContent = text;
+        }
 
-            // Mark session as authenticated (temporary)
-            window.isAuthenticated = true;
+        // Minecraft Authentication
+        async function authMinecraft() {
+            let xstsJson;
 
-            // Show continue button
-            document.getElementById("continueBtn").style.display = "block";
+            try {
+                xstsJson = JSON.parse(document.getElementById("xstsOutput").textContent);
+            } catch {
+                return alert("You must complete XSTS authentication first.");
+            }
+
+            const res = await fetch("https://minecraftwebclient-backend.onrender.com/auth/mc", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    xsts_token: xstsJson.Token,
+                    uhs: xstsJson.DisplayClaims.xui[0].uhs
+                })
+            });
+
+            const mcJson = await res.json();
+            document.getElementById("mcOutput").textContent =
+                JSON.stringify(mcJson, null, 2);
+
+            if (mcJson.profile && mcJson.profile.id) {
+                window.minecraftProfile = mcJson.profile;
+                window.minecraftAccessToken = mcJson.mc_access_token;
+
+                document.getElementById("continueBtn").style.display = "block";
+            }
         }
 
         // SECURE one‑time entry token system
@@ -253,7 +259,6 @@
             window.location.href = "client.html?entry=" + entryToken;
         }
 
-        // Run on page load
         checkForMsToken();
     </script>
 </body>
