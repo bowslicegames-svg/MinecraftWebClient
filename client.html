@@ -1,124 +1,185 @@
-<body style="margin:0; overflow:hidden; background:black;">
-    <canvas id="mcCanvas"></canvas>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Minecraft Client</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      overflow: hidden;
+      touch-action: none;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
 
-    <script>
-        const canvas = document.getElementById("mcCanvas");
-        const renderer = new THREE.WebGLRenderer({ canvas });
-        renderer.setSize(window.innerWidth, window.innerHeight);
+    #video {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: #111;
+    }
 
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb);
+    #joystick-area {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 40vw;
+      height: 40vh;
+      touch-action: none;
+      z-index: 10;
+    }
 
-        const camera = new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            1000
-        );
-        camera.position.set(0, 2, 5);
+    #look-area {
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      width: 60vw;
+      height: 100vh;
+      touch-action: none;
+      z-index: 10;
+    }
 
-        // -----------------------------
-        // BLOCK TEXTURE ATLAS
-        // -----------------------------
-        const loader = new THREE.TextureLoader();
-        const atlas = loader.load("https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.1/assets/minecraft/textures/block/stone.png");
+    #ui-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 48px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 4px 8px;
+      background: rgba(0,0,0,0.6);
+      z-index: 20;
+    }
 
-        atlas.magFilter = THREE.NearestFilter;
-        atlas.minFilter = THREE.NearestFilter;
+    #ui-bar button {
+      padding: 6px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+      background: #1e88e5;
+      color: #fff;
+    }
 
-        // -----------------------------
-        // BLOCK MATERIAL
-        // -----------------------------
-        const blockMaterial = new THREE.MeshBasicMaterial({
-            map: atlas
-        });
+    #chat-input {
+      flex: 1;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+    }
+  </style>
 
-        // -----------------------------
-        // BLOCK GEOMETRY
-        // -----------------------------
-        const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
+  <script>
+    // Redirect protection
+    (function() {
+      const allowed = location.origin + "/MinecraftWebClient/index.html";
+      if (document.referrer !== allowed) {
+        window.location.href = "index.html";
+      }
+    })();
+  </script>
+</head>
+<body>
 
-        function addBlock(x, y, z) {
-            const mesh = new THREE.Mesh(blockGeometry, blockMaterial);
-            mesh.position.set(x, y, z);
-            scene.add(mesh);
-        }
+  <iframe id="video" src="http://YOUR_VM_IP:47990" allow="autoplay; fullscreen"></iframe>
 
-        // -----------------------------
-        // GENERATE A SIMPLE CHUNK
-        // -----------------------------
-        for (let x = -5; x <= 5; x++) {
-            for (let z = -5; z <= 5; z++) {
-                addBlock(x, 0, z);
-            }
-        }
+  <div id="joystick-area"></div>
+  <div id="look-area"></div>
 
-        // -----------------------------
-        // CAMERA CONTROLS (MOUSE LOOK)
-        // -----------------------------
-        let pitch = 0;
-        let yaw = 0;
+  <div id="ui-bar">
+    <button onclick="sendKey('ESC')">ESC</button>
+    <button onclick="sendKey('E')">Inventory</button>
+    <button onclick="sendKey('SPACE')">Jump</button>
+    <input id="chat-input" placeholder="Chat…">
+    <button onclick="sendChat()">Send</button>
+  </div>
 
-        document.body.onclick = () => {
-            document.body.requestPointerLock();
-        };
+  <script>
+    const BACKEND = "https://minecraftwebclient-backend.onrender.com";
 
-        document.addEventListener("mousemove", (e) => {
-            if (document.pointerLockElement === document.body) {
-                yaw -= e.movementX * 0.002;
-                pitch -= e.movementY * 0.002;
-                pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+    // Movement
+    let joyStart = null;
+    const joy = document.getElementById("joystick-area");
 
-                camera.rotation.set(pitch, yaw, 0);
-            }
-        });
+    joy.addEventListener("touchstart", e => {
+      const t = e.touches[0];
+      joyStart = { x: t.clientX, y: t.clientY };
+    });
 
-        // -----------------------------
-        // MOVEMENT (WASD)
-        // -----------------------------
-        const keys = {};
-        document.addEventListener("keydown", (e) => (keys[e.key] = true));
-        document.addEventListener("keyup", (e) => (keys[e.key] = false));
+    joy.addEventListener("touchmove", e => {
+      if (!joyStart) return;
+      const t = e.touches[0];
+      const dx = t.clientX - joyStart.x;
+      const dy = t.clientY - joyStart.y;
+      fetch(BACKEND + "/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ x: dx/50, y: dy/50 })
+      });
+    });
 
-        function updateMovement(delta) {
-            const speed = 5 * delta;
+    joy.addEventListener("touchend", () => {
+      joyStart = null;
+      fetch(BACKEND + "/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ x: 0, y: 0 })
+      });
+    });
 
-            const forward = new THREE.Vector3(
-                -Math.sin(yaw),
-                0,
-                -Math.cos(yaw)
-            );
+    // Look
+    let lookLast = null;
+    const look = document.getElementById("look-area");
 
-            const right = new THREE.Vector3(
-                Math.cos(yaw),
-                0,
-                -Math.sin(yaw)
-            );
+    look.addEventListener("touchstart", e => {
+      const t = e.touches[0];
+      lookLast = { x: t.clientX, y: t.clientY };
+    });
 
-            if (keys["w"]) camera.position.addScaledVector(forward, speed);
-            if (keys["s"]) camera.position.addScaledVector(forward, -speed);
-            if (keys["a"]) camera.position.addScaledVector(right, -speed);
-            if (keys["d"]) camera.position.addScaledVector(right, speed);
-        }
+    look.addEventListener("touchmove", e => {
+      if (!lookLast) return;
+      const t = e.touches[0];
+      const dx = t.clientX - lookLast.x;
+      const dy = t.clientY - lookLast.y;
+      lookLast = { x: t.clientX, y: t.clientY };
+      fetch(BACKEND + "/look", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dx, dy })
+      });
+    });
 
-        // -----------------------------
-        // MAIN LOOP
-        // -----------------------------
-        let last = performance.now();
+    look.addEventListener("touchend", () => {
+      lookLast = null;
+    });
 
-        function loop() {
-            const now = performance.now();
-            const delta = (now - last) / 1000;
-            last = now;
+    // Keys
+    function sendKey(key) {
+      fetch(BACKEND + "/key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key })
+      });
+    }
 
-            updateMovement(delta);
-
-            renderer.render(scene, camera);
-            requestAnimationFrame(loop);
-        }
-
-        loop();
-    </script>
+    // Chat
+    function sendChat() {
+      const input = document.getElementById("chat-input");
+      const text = input.value.trim();
+      if (!text) return;
+      fetch(BACKEND + "/text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      });
+      input.value = "";
+    }
+  </script>
 </body>
+</html>
