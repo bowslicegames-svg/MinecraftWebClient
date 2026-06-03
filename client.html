@@ -1,185 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Minecraft Client</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: #000;
-      overflow: hidden;
-      touch-action: none;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
-    #video {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      background: #111;
-    }
-
-    #joystick-area {
-      position: fixed;
-      left: 0;
-      bottom: 0;
-      width: 40vw;
-      height: 40vh;
-      touch-action: none;
-      z-index: 10;
-    }
-
-    #look-area {
-      position: fixed;
-      right: 0;
-      bottom: 0;
-      width: 60vw;
-      height: 100vh;
-      touch-action: none;
-      z-index: 10;
-    }
-
-    #ui-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 48px;
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      padding: 4px 8px;
-      background: rgba(0,0,0,0.6);
-      z-index: 20;
-    }
-
-    #ui-bar button {
-      padding: 6px 10px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: none;
-      background: #1e88e5;
-      color: #fff;
-    }
-
-    #chat-input {
-      flex: 1;
-      padding: 6px 8px;
-      border-radius: 6px;
-      border: none;
-      font-size: 14px;
-    }
-  </style>
-
-  <script>
-    // Redirect protection
-    (function() {
-      const allowed = location.origin + "/MinecraftWebClient/index.html";
-      if (document.referrer !== allowed) {
-        window.location.href = "index.html";
-      }
-    })();
-  </script>
-</head>
+<!-- client.html (simplified) -->
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Link Oracle</title>
 <body>
-
-  <iframe id="video" src="http://YOUR_VM_IP:47990" allow="autoplay; fullscreen"></iframe>
-
-  <div id="joystick-area"></div>
-  <div id="look-area"></div>
-
-  <div id="ui-bar">
-    <button onclick="sendKey('ESC')">ESC</button>
-    <button onclick="sendKey('E')">Inventory</button>
-    <button onclick="sendKey('SPACE')">Jump</button>
-    <input id="chat-input" placeholder="Chat…">
-    <button onclick="sendChat()">Send</button>
-  </div>
-
-  <script>
-    const BACKEND = "https://minecraftwebclient-backend.onrender.com";
-
-    // Movement
-    let joyStart = null;
-    const joy = document.getElementById("joystick-area");
-
-    joy.addEventListener("touchstart", e => {
-      const t = e.touches[0];
-      joyStart = { x: t.clientX, y: t.clientY };
-    });
-
-    joy.addEventListener("touchmove", e => {
-      if (!joyStart) return;
-      const t = e.touches[0];
-      const dx = t.clientX - joyStart.x;
-      const dy = t.clientY - joyStart.y;
-      fetch(BACKEND + "/move", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ x: dx/50, y: dy/50 })
-      });
-    });
-
-    joy.addEventListener("touchend", () => {
-      joyStart = null;
-      fetch(BACKEND + "/move", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ x: 0, y: 0 })
-      });
-    });
-
-    // Look
-    let lookLast = null;
-    const look = document.getElementById("look-area");
-
-    look.addEventListener("touchstart", e => {
-      const t = e.touches[0];
-      lookLast = { x: t.clientX, y: t.clientY };
-    });
-
-    look.addEventListener("touchmove", e => {
-      if (!lookLast) return;
-      const t = e.touches[0];
-      const dx = t.clientX - lookLast.x;
-      const dy = t.clientY - lookLast.y;
-      lookLast = { x: t.clientX, y: t.clientY };
-      fetch(BACKEND + "/look", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dx, dy })
-      });
-    });
-
-    look.addEventListener("touchend", () => {
-      lookLast = null;
-    });
-
-    // Keys
-    function sendKey(key) {
-      fetch(BACKEND + "/key", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key })
-      });
-    }
-
-    // Chat
-    function sendChat() {
-      const input = document.getElementById("chat-input");
-      const text = input.value.trim();
-      if (!text) return;
-      fetch(BACKEND + "/text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text })
-      });
-      input.value = "";
-    }
-  </script>
+<h2>Link Oracle (paste OCI config)</h2>
+<textarea id="oci" rows=10 cols=60 placeholder="[DEFAULT]
+user=ocid1.user...
+tenancy=ocid1.tenancy...
+region=us-ashburn-1
+fingerprint=aa:bb:...
+key_file=-----BEGIN PRIVATE KEY-----..."></textarea>
+<br>
+<button id="link">Link Oracle</button>
+<button id="create">Create Always Free VM</button>
+<pre id="out"></pre>
+<script>
+const BACKEND = "https://minecraftwebclient-backend.onrender.com";
+document.getElementById('link').onclick = async () => {
+  const cfg = document.getElementById('oci').value;
+  const r = await fetch(BACKEND + '/oracle/link', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:cfg})});
+  document.getElementById('out').textContent = await r.text();
+};
+document.getElementById('create').onclick = async () => {
+  const r = await fetch(BACKEND + '/oracle/create-vm', {method:'POST'});
+  document.getElementById('out').textContent = await r.text();
+};
+</script>
 </body>
-</html>
