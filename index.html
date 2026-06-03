@@ -112,15 +112,6 @@
 
     <main>
 
-        <!-- Instructions -->
-        <section>
-            <h2>Overview & Instructions</h2>
-            <p>
-                This interface performs the full Microsoft → Xbox Live → XSTS → Minecraft authentication chain.
-                All authentication is handled securely through the Render backend.
-            </p>
-        </section>
-
         <!-- Microsoft Login -->
         <section>
             <h2>Microsoft Authentication</h2>
@@ -197,9 +188,9 @@
             msAccessToken = parsed.access_token;
 
             document.getElementById("loginOutput").textContent =
-                "✔ Microsoft login complete";
+                "✔ Microsoft login complete\n\n" +
+                JSON.stringify(parsed, null, 2);
 
-            // Clean URL
             window.history.replaceState({}, document.title, "/MinecraftWebClient/");
         }
 
@@ -217,13 +208,9 @@
 
             xblData = await res.json();
 
-            if (!xblData.Token) {
-                document.getElementById("xblOutput").textContent = "❌ Xbox Live authentication failed";
-                return;
-            }
-
             document.getElementById("xblOutput").textContent =
-                "✔ Xbox Live authentication successful";
+                "✔ Xbox Live authentication successful\n\n" +
+                JSON.stringify(xblData, null, 2);
         }
 
         // -------------------------------
@@ -243,13 +230,9 @@
 
             xstsData = await res.json();
 
-            if (!xstsData.Token) {
-                document.getElementById("xstsOutput").textContent = "❌ XSTS authorization failed";
-                return;
-            }
-
             document.getElementById("xstsOutput").textContent =
-                "✔ XSTS authorization successful";
+                "✔ XSTS authorization successful\n\n" +
+                JSON.stringify(xstsData, null, 2);
         }
 
         // -------------------------------
@@ -269,13 +252,9 @@
 
             const mcJson = await res.json();
 
-            if (!mcJson.profile) {
-                document.getElementById("mcOutput").textContent = "❌ Minecraft authentication failed";
-                return;
-            }
-
             document.getElementById("mcOutput").textContent =
-                "✔ Minecraft authentication successful";
+                "✔ Minecraft authentication successful\n\n" +
+                JSON.stringify(mcJson, null, 2);
 
             // Username
             document.getElementById("usernameDisplay").textContent =
