@@ -15,26 +15,22 @@
             background: #0e0e0e;
             color: #e6e6e6;
         }
-
         header {
             background: #1c1c1c;
             padding: 20px;
             text-align: center;
             border-bottom: 2px solid #2e2e2e;
         }
-
         header h1 {
             margin: 0;
             font-size: 28px;
             font-weight: 600;
         }
-
         main {
             max-width: 900px;
             margin: 40px auto;
             padding: 20px;
         }
-
         section {
             background: #1a1a1a;
             padding: 20px;
@@ -42,14 +38,12 @@
             margin-bottom: 25px;
             border: 1px solid #2c2c2c;
         }
-
         section h2 {
             margin-top: 0;
             font-size: 22px;
             border-bottom: 1px solid #333;
             padding-bottom: 8px;
         }
-
         button {
             background: #3a8b3a;
             color: white;
@@ -60,17 +54,14 @@
             font-size: 15px;
             margin-top: 10px;
         }
-
         button:hover {
             background: #2f732f;
         }
-
         button:disabled {
             background: #555;
             cursor: not-allowed;
             opacity: 0.4;
         }
-
         .output-box {
             background: #111;
             padding: 12px;
@@ -80,7 +71,6 @@
             white-space: pre-wrap;
             border: 1px solid #333;
         }
-
         #skinCanvas {
             margin-top: 15px;
             width: 300px;
@@ -88,14 +78,12 @@
             display: none;
             border: 2px solid #333;
         }
-
         #usernameDisplay {
             margin-top: 10px;
             font-size: 18px;
             font-weight: bold;
             display: none;
         }
-
         footer {
             text-align: center;
             padding: 20px;
@@ -115,7 +103,6 @@
         <!-- Microsoft Login -->
         <section>
             <h2>Microsoft Authentication</h2>
-            <p>Click below to begin Microsoft login.</p>
             <button onclick="redirectToMicrosoft()">Start Microsoft Authentication</button>
             <div id="loginOutput" class="output-box"></div>
         </section>
@@ -138,7 +125,6 @@
         <section>
             <h2>Minecraft Authentication</h2>
             <button onclick="authMinecraft()">Authenticate with Minecraft</button>
-
             <div id="mcOutput" class="output-box"></div>
 
             <canvas id="skinCanvas" width="300" height="400"></canvas>
@@ -252,6 +238,15 @@
 
             const mcJson = await res.json();
 
+            // ❌ If backend returned an error, show it and STOP
+            if (mcJson.error) {
+                document.getElementById("mcOutput").textContent =
+                    "❌ Minecraft authentication failed\n\n" +
+                    JSON.stringify(mcJson, null, 2);
+                return;
+            }
+
+            // ✔ Success
             document.getElementById("mcOutput").textContent =
                 "✔ Minecraft authentication successful\n\n" +
                 JSON.stringify(mcJson, null, 2);
