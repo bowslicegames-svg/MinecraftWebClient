@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Minecraft Web Client</title>
 
-    <!-- 3D Skin Renderer -->
     <script src="https://unpkg.com/skinview3d/bundles/skinview3d.bundle.js"></script>
 
     <style>
@@ -133,7 +132,6 @@
         <!-- Xbox Live -->
         <section>
             <h2>Xbox Live Authentication</h2>
-            <p>Exchange your Microsoft token for an Xbox Live token.</p>
             <button onclick="authXBL()">Authenticate with Xbox Live</button>
             <div id="xblOutput" class="output-box"></div>
         </section>
@@ -141,7 +139,6 @@
         <!-- XSTS -->
         <section>
             <h2>XSTS Authorization</h2>
-            <p>Authorize your Xbox Live identity with XSTS.</p>
             <button onclick="authXSTS()">Request XSTS Token</button>
             <div id="xstsOutput" class="output-box"></div>
         </section>
@@ -149,8 +146,6 @@
         <!-- Minecraft Auth -->
         <section>
             <h2>Minecraft Authentication</h2>
-            <p>This step exchanges your XSTS token for a Minecraft access token and checks your entitlements.</p>
-
             <button onclick="authMinecraft()">Authenticate with Minecraft</button>
 
             <div id="mcOutput" class="output-box"></div>
@@ -159,10 +154,9 @@
             <div id="usernameDisplay"></div>
         </section>
 
-        <!-- Continue to Client -->
+        <!-- Continue -->
         <section>
             <h2>Continue</h2>
-            <p>Once fully authenticated, continue to the client.</p>
             <button id="continueBtn" disabled onclick="goToClient()">Go to Client</button>
         </section>
 
@@ -173,73 +167,103 @@
     </footer>
 
     <script>
+        const backend = "https://minecraftwebclient-backend.onrender.com";
+
+        let msAccessToken = null;
+        let xblData = null;
+        let xstsData = null;
+
+        // -------------------------------
+        // Microsoft Login
+        // -------------------------------
         function redirectToMicrosoft() {
-            window.location.href = "https://minecraftwebclient-backend.onrender.com/auth/login";
+            window.location.href = backend + "/auth/login";
         }
 
-        async function checkForMsToken() {
+        function checkForMsToken() {
             const params = new URLSearchParams(window.location.search);
-            const rawToken = params.get("ms_token");
+            const raw = params.get("ms_token");
 
-            if (!rawToken) return;
+            if (!raw) return;
 
-            let msToken;
+            let parsed;
             try {
-                msToken = JSON.parse(decodeURIComponent(rawToken));
+                parsed = JSON.parse(decodeURIComponent(raw));
             } catch {
-                document.getElementById("loginOutput").textContent = "Failed to parse ms_token.";
+                document.getElementById("loginOutput").textContent = "❌ Failed to parse ms_token.";
                 return;
             }
 
-            document.getElementById("loginOutput").textContent = "✔ Microsoft authentication successful";
+            msAccessToken = parsed.access_token;
 
-            window.msAccessToken = msToken.access_token;
+            document.getElementById("loginOutput").textContent =
+                "✔ Microsoft login complete";
 
+            // Clean URL
             window.history.replaceState({}, document.title, "/MinecraftWebClient/");
         }
 
+        // -------------------------------
+        // Xbox Live
+        // -------------------------------
         async function authXBL() {
-            if (!window.msAccessToken) return alert("Login with Microsoft first.");
+            if (!msAccessToken) return alert("Login with Microsoft first.");
 
-            const res = await fetch("https://minecraftwebclient-backend.onrender.com/auth/xbl", {
+            const res = await fetch(backend + "/auth/xbl", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ access_token: window.msAccessToken })
+                body: JSON.stringify({ access_token: msAccessToken })
             });
 
-            const xblJson = await res.json();
-            window.xblData = xblJson;
+            xblData = await res.json();
 
-            document.getElementById("xblOutput").textContent = "✔ Xbox Live authentication successful";
+            if (!xblData.Token) {
+                document.getElementById("xblOutput").textContent = "❌ Xbox Live authentication failed";
+                return;
+            }
+
+            document.getElementById("xblOutput").textContent =
+                "✔ Xbox Live authentication successful";
         }
 
+        // -------------------------------
+        // XSTS
+        // -------------------------------
         async function authXSTS() {
-            if (!window.xblData) return alert("You must complete Xbox Live authentication first.");
+            if (!xblData) return alert("You must complete Xbox Live authentication first.");
 
-            const res = await fetch("https://minecraftwebclient-backend.onrender.com/auth/xsts", {
+            const res = await fetch(backend + "/auth/xsts", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    xbl_token: window.xblData.Token,
-                    uhs: window.xblData.DisplayClaims.xui[0].uhs
+                    xbl_token: xblData.Token,
+                    uhs: xblData.DisplayClaims.xui[0].uhs
                 })
             });
 
-            const xstsJson = await res.json();
-            window.xstsData = xstsJson;
+            xstsData = await res.json();
 
-            document.getElementById("xstsOutput").textContent = "✔ XSTS authorization successful";
+            if (!xstsData.Token) {
+                document.getElementById("xstsOutput").textContent = "❌ XSTS authorization failed";
+                return;
+            }
+
+            document.getElementById("xstsOutput").textContent =
+                "✔ XSTS authorization successful";
         }
 
+        // -------------------------------
+        // Minecraft Auth
+        // -------------------------------
         async function authMinecraft() {
-            if (!window.xstsData) return alert("You must complete XSTS authentication first.");
+            if (!xstsData) return alert("You must complete XSTS authentication first.");
 
-            const res = await fetch("https://minecraftwebclient-backend.onrender.com/auth/mc", {
+            const res = await fetch(backend + "/auth/mc", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    xsts_token: window.xstsData.Token,
-                    uhs: window.xstsData.DisplayClaims.xui[0].uhs
+                    xsts_token: xstsData.Token,
+                    uhs: xstsData.DisplayClaims.xui[0].uhs
                 })
             });
 
@@ -250,14 +274,15 @@
                 return;
             }
 
-            document.getElementById("mcOutput").textContent = "✔ Minecraft authentication successful";
+            document.getElementById("mcOutput").textContent =
+                "✔ Minecraft authentication successful";
 
             // Username
             document.getElementById("usernameDisplay").textContent =
                 "Logged in as: " + mcJson.profile.name;
             document.getElementById("usernameDisplay").style.display = "block";
 
-            // 3D Skin Preview
+            // Skin
             const skinUrl = mcJson.profile.skins?.[0]?.url;
             if (skinUrl) {
                 const canvas = document.getElementById("skinCanvas");
@@ -274,16 +299,16 @@
                 viewer.animation = new skinview3d.IdleAnimation();
             }
 
-            // Unlock continue button
+            // Unlock continue
             const btn = document.getElementById("continueBtn");
             btn.disabled = false;
             btn.style.opacity = "1";
             btn.style.cursor = "pointer";
-
-            window.minecraftProfile = mcJson.profile;
-            window.minecraftAccessToken = mcJson.mc_access_token;
         }
 
+        // -------------------------------
+        // Continue
+        // -------------------------------
         function goToClient() {
             const entryToken = Math.random().toString(36).substring(2);
             sessionStorage.setItem("entryToken", entryToken);
