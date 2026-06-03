@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Minecraft Web Client</title>
 
-    <!-- 3D Skin Renderer -->
-    <script src="https://unpkg.com/skinview3d/bundles/skinview3d.bundle.js"></script>
-
     <style>
         body {
             margin: 0;
@@ -82,12 +79,13 @@
             border: 1px solid #333;
         }
 
-        #skinCanvas {
+        #skinPreview {
             margin-top: 15px;
-            width: 300px;
-            height: 400px;
-            display: none;
+            width: 128px;
+            height: 256px;
+            image-rendering: pixelated;
             border: 2px solid #333;
+            display: none;
         }
 
         #usernameDisplay {
@@ -155,7 +153,7 @@
 
             <div id="mcOutput" class="output-box"></div>
 
-            <canvas id="skinCanvas" width="300" height="400"></canvas>
+            <img id="skinPreview" />
             <div id="usernameDisplay"></div>
         </section>
 
@@ -208,6 +206,8 @@
             });
 
             const xblJson = await res.json();
+
+            // Store real JSON internally
             window.xblData = xblJson;
 
             document.getElementById("xblOutput").textContent = "✔ Xbox Live authentication successful";
@@ -226,6 +226,8 @@
             });
 
             const xstsJson = await res.json();
+
+            // Store real JSON internally
             window.xstsData = xstsJson;
 
             document.getElementById("xstsOutput").textContent = "✔ XSTS authorization successful";
@@ -252,26 +254,17 @@
 
             document.getElementById("mcOutput").textContent = "✔ Minecraft authentication successful";
 
-            // Username
+            // Show username
             document.getElementById("usernameDisplay").textContent =
                 "Logged in as: " + mcJson.profile.name;
             document.getElementById("usernameDisplay").style.display = "block";
 
-            // 3D Skin Preview
-            const skinUrl = mcJson.profile.skins?.[0]?.url;
-            if (skinUrl) {
-                const canvas = document.getElementById("skinCanvas");
-                canvas.style.display = "block";
-
-                const viewer = new skinview3d.SkinViewer({
-                    canvas: canvas,
-                    width: 300,
-                    height: 400,
-                    skin: skinUrl
-                });
-
-                viewer.controls.enableZoom = false;
-                viewer.animation = new skinview3d.IdleAnimation();
+            // Show skin preview
+            const skin = mcJson.profile.skins?.[0]?.url;
+            if (skin) {
+                const img = document.getElementById("skinPreview");
+                img.src = skin;
+                img.style.display = "block";
             }
 
             // Unlock continue button
