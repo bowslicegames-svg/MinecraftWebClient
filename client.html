@@ -1,28 +1,139 @@
-<!-- client.html (simplified) -->
-<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Link Oracle</title>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Minecraft Cloud Client</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <!-- styles omitted for brevity: you can keep the previous nice UI CSS -->
+</head>
 <body>
-<h2>Link Oracle (paste OCI config)</h2>
-<textarea id="oci" rows=10 cols=60 placeholder="[DEFAULT]
-user=ocid1.user...
-tenancy=ocid1.tenancy...
-region=us-ashburn-1
-fingerprint=aa:bb:...
-key_file=-----BEGIN PRIVATE KEY-----..."></textarea>
-<br>
-<button id="link">Link Oracle</button>
-<button id="create">Create Always Free VM</button>
-<pre id="out"></pre>
+  <!-- layout omitted; keep your previous structure -->
+  <iframe id="stream" src="" allow="autoplay; fullscreen"></iframe>
+  <div id="joystick-area"></div>
+  <div id="look-area"></div>
+  <div id="ui-bar">
+    <button class="primary" id="btn-connect">Connect &amp; Launch</button>
+    <button onclick="sendKey('ESC')">ESC</button>
+    <button onclick="sendKey('E')">Inv</button>
+    <button onclick="sendKey('SPACE')">Jump</button>
+    <input id="chat-input" placeholder="Chat / commands…">
+    <button onclick="sendChat()">Send</button>
+  </div>
+
 <script>
-const BACKEND = "https://minecraftwebclient-backend.onrender.com";
-document.getElementById('link').onclick = async () => {
-  const cfg = document.getElementById('oci').value;
-  const r = await fetch(BACKEND + '/oracle/link', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:cfg})});
-  document.getElementById('out').textContent = await r.text();
-};
-document.getElementById('create').onclick = async () => {
-  const r = await fetch(BACKEND + '/oracle/create-vm', {method:'POST'});
-  document.getElementById('out').textContent = await r.text();
-};
+const BACKEND = "https://minecraftwebclient-backend.onrender.com"
+
+// Get VM IP from backend and load Sunshine
+async function connectStream() {
+  try {
+    const r = await fetch(BACKEND + "/oracle/vm")
+    if (!r.ok) throw new Error("no vm")
+    const { ip } = await r.json()
+    const iframe = document.getElementById("stream")
+    iframe.src = "http://" + ip + ":47990"
+  } catch (e) {
+    alert("No VM IP stored yet. Create your VM first.")
+  }
+}
+
+document.getElementById("btn-connect").onclick = connectStream
+
+// Save Oracle config (same as before)
+async function refreshOracleStatus() {
+  try {
+    const r = await fetch(BACKEND + "/oracle/config/status")
+    const j = await r.json()
+    if (j.saved) localStorage.setItem("oracleLinked", "1")
+    else localStorage.removeItem("oracleLinked")
+  } catch {}
+}
+
+document.getElementById("btn-save-config")?.addEventListener("click", async () => {
+  const cfg = document.getElementById("oci-config").value.trim()
+  if (!cfg) return alert("Paste your OCI config first.")
+  const r = await fetch(BACKEND + "/oracle/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ config: cfg })
+  })
+  if (!r.ok) return alert("Failed to save config.")
+  await refreshOracleStatus()
+  alert("Oracle config saved.")
+})
+
+// Auto-connect if Oracle is linked and VM IP exists
+window.addEventListener("load", async () => {
+  await refreshOracleStatus()
+  if (localStorage.getItem("oracleLinked") === "1") {
+    connectStream()
+  }
+})
+
+// Movement / look / key / text same as before:
+const joy = document.getElementById("joystick-area")
+let joyStart = null
+joy.addEventListener("touchstart", e => {
+  const t = e.touches[0]
+  joyStart = { x: t.clientX, y: t.clientY }
+})
+joy.addEventListener("touchmove", e => {
+  if (!joyStart) return
+  const t = e.touches[0]
+  const dx = t.clientX - joyStart.x
+  const dy = t.clientY - joyStart.y
+  fetch(BACKEND + "/move", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ x: dx/50, y: dy/50 })
+  }).catch(()=>{})
+})
+joy.addEventListener("touchend", () => {
+  joyStart = null
+  fetch(BACKEND + "/move", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ x: 0, y: 0 })
+  }).catch(()=>{})
+})
+
+const look = document.getElementById("look-area")
+let lookLast = null
+look.addEventListener("touchstart", e => {
+  const t = e.touches[0]
+  lookLast = { x: t.clientX, y: t.clientY }
+})
+look.addEventListener("touchmove", e => {
+  if (!lookLast) return
+  const t = e.touches[0]
+  const dx = t.clientX - lookLast.x
+  const dy = t.clientY - lookLast.y
+  lookLast = { x: t.clientX, y: t.clientY }
+  fetch(BACKEND + "/look", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dx, dy })
+  }).catch(()=>{})
+})
+look.addEventListener("touchend", () => { lookLast = null })
+
+function sendKey(key) {
+  fetch(BACKEND + "/key", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key })
+  }).catch(()=>{})
+}
+function sendChat() {
+  const input = document.getElementById("chat-input")
+  const text = input.value.trim()
+  if (!text) return
+  fetch(BACKEND + "/text", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text })
+  }).catch(()=>{})
+  input.value = ""
+}
 </script>
 </body>
+</html>
